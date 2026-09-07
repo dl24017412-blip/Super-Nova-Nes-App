@@ -1,0 +1,6 @@
+{
+  "name": "SuperNova SNES",
+  "description": "Emulador nativo de Super Nintendo com alto desempenho, controles customizáveis e operação 100% offline.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
