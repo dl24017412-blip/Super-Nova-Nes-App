@@ -28,6 +28,7 @@ object NativeBridge {
 
     external fun nativeSetVideoOptions(aspect: Int, filter: Int, profile: Int)
     external fun nativeSetAudioOptions(enabled: Boolean, volume: Float)
+    external fun nativeSetFastForward(enabled: Boolean)
     external fun nativeGetStats(statsArray: FloatArray)
 
     external fun nativeGetRomTitle(): String

@@ -57,6 +57,8 @@ fun EmulatorScreen(
                 .testTag("snes_surface_view"),
             factory = { context ->
                 SurfaceView(context).apply {
+                    setZOrderMediaOverlay(true)
+                    holder.setKeepScreenOn(true)
                     holder.addCallback(object : SurfaceHolder.Callback {
                         override fun surfaceCreated(holder: SurfaceHolder) {
                             NativeBridge.nativeSetSurface(holder.surface)
@@ -157,7 +159,11 @@ fun EmulatorScreen(
                     viewModel.setButtonState(button, pressed)
                 },
                 onOpenMenu = { viewModel.openPauseMenu() },
-                onQuickReset = { viewModel.resetGame() }
+                onQuickReset = { viewModel.resetGame() },
+                isFastForward = uiState.isFastForward,
+                onToggleFastForward = { viewModel.toggleFastForward() },
+                onQuickSave = { viewModel.quickSave() },
+                onQuickLoad = { viewModel.quickLoad() }
             )
         }
 

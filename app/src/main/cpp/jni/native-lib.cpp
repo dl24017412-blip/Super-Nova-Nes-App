@@ -198,4 +198,9 @@ Java_com_example_jni_NativeBridge_nativeHasBattery(JNIEnv* /* env */, jobject /*
     return header.hasBattery ? JNI_TRUE : JNI_FALSE;
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_jni_NativeBridge_nativeSetFastForward(JNIEnv* /* env */, jobject /* this */, jboolean enabled) {
+    SnesCore::getInstance()->setFastForward(enabled == JNI_TRUE);
+}
+
 } // extern "C"

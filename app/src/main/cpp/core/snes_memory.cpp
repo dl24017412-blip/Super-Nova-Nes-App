@@ -24,6 +24,8 @@ void SnesMemory::reset() {
     wrdivQuot = wrdivRem = 0;
     htimeL = htimeH = vtimeL = vtimeH = 0;
     mdmaen = hdmaen = 0;
+    currentScanline = 0;
+    vblankFlag = false;
     std::memset(dma, 0, sizeof(dma));
 }
 
@@ -139,8 +141,8 @@ uint8_t SnesMemory::read(uint32_t addr) {
             // CPU Bus registers
             switch (offset) {
                 case 0x4210: { // RDNMI
-                    uint8_t val = (core->getCpu()->nmiPending ? 0x80 : 0x00) | 0x02;
-                    core->getCpu()->nmiPending = false;
+                    uint8_t val = (vblankFlag ? 0x80 : 0x00) | 0x02;
+                    vblankFlag = false; // Reading $4210 clears NMI flag
                     return val;
                 }
                 case 0x4211: { // TIMEUP
@@ -148,8 +150,13 @@ uint8_t SnesMemory::read(uint32_t addr) {
                     core->getCpu()->irqPending = false;
                     return val;
                 }
-                case 0x4212: // HVBJOY (Status)
-                    return 0x00;
+                case 0x4212: { // HVBJOY (Status)
+                    uint8_t val = 0x00;
+                    if (currentScanline >= 224) {
+                        val |= 0x80; // In VBlank
+                    }
+                    return val;
+                }
                 case 0x4214: return wrdivQuot & 0xFF;
                 case 0x4215: return (wrdivQuot >> 8) & 0xFF;
                 case 0x4216: return wrmultRes & 0xFF;
@@ -321,12 +328,29 @@ void SnesMemory::doDma(uint8_t channel) {
     if (channel >= 8) return;
     DmaChannel& ch = dma[channel];
     uint32_t aAddr = (ch.a1b << 16) | ch.a1t;
-    uint16_t bReg = 0x2100 | ch.bbad;
     uint32_t count = ch.das ? ch.das : 0x10000;
     bool inc = !(ch.dmap & 0x08);
     bool dec = (ch.dmap & 0x10);
+    uint8_t mode = ch.dmap & 0x07;
+
+    // Pattern table for DMA transfers
+    static const uint8_t bOffsets[8][4] = {
+        {0, 0, 0, 0}, // Mode 0: 1 reg (p)
+        {0, 1, 0, 1}, // Mode 1: 2 regs (p, p+1)
+        {0, 0, 0, 0}, // Mode 2: 1 reg write twice (p, p)
+        {0, 0, 1, 1}, // Mode 3: 2 regs write twice (p, p, p+1, p+1)
+        {0, 1, 2, 3}, // Mode 4: 4 regs (p, p+1, p+2, p+3)
+        {0, 1, 0, 1}, // Mode 5
+        {0, 0, 0, 0}, // Mode 6
+        {0, 0, 1, 1}  // Mode 7
+    };
+    static const uint8_t patternLen[8] = {1, 2, 2, 4, 4, 4, 1, 4};
+    int pLen = patternLen[mode];
 
     for (uint32_t i = 0; i < count; ++i) {
+        uint8_t regOffset = bOffsets[mode][i % pLen];
+        uint16_t bReg = 0x2100 | ((ch.bbad + regOffset) & 0xFF);
+
         if (!(ch.dmap & 0x80)) {
             // CPU to PPU
             uint8_t data = read(aAddr);
@@ -357,9 +381,41 @@ void SnesMemory::runHdma() {
     }
 }
 
+static uint16_t convertToSnesJoypad(uint16_t btns) {
+    uint16_t word = 0;
+    // High byte: B, Y, Select, Start, Up, Down, Left, Right
+    if (btns & SNES_BTN_B)      word |= (1 << 15);
+    if (btns & SNES_BTN_Y)      word |= (1 << 14);
+    if (btns & SNES_BTN_SELECT) word |= (1 << 13);
+    if (btns & SNES_BTN_START)  word |= (1 << 12);
+    if (btns & SNES_BTN_UP)     word |= (1 << 11);
+    if (btns & SNES_BTN_DOWN)   word |= (1 << 10);
+    if (btns & SNES_BTN_LEFT)   word |= (1 << 9);
+    if (btns & SNES_BTN_RIGHT)  word |= (1 << 8);
+    // Low byte: A, X, L, R
+    if (btns & SNES_BTN_A)      word |= (1 << 7);
+    if (btns & SNES_BTN_X)      word |= (1 << 6);
+    if (btns & SNES_BTN_L)      word |= (1 << 5);
+    if (btns & SNES_BTN_R)      word |= (1 << 4);
+    return word;
+}
+
 void SnesMemory::setJoypad(int controller, uint16_t buttons) {
-    if (controller == 0) joypad1 = buttons;
-    else joypad2 = buttons;
+    uint16_t word = convertToSnesJoypad(buttons);
+    if (controller == 0) joypad1 = word;
+    else joypad2 = word;
+}
+
+void SnesMemory::setScanline(int line) {
+    currentScanline = line;
+    if (line == 0) {
+        vblankFlag = false;
+    }
+}
+
+void SnesMemory::triggerVBlank() {
+    vblankFlag = true;
+    currentScanline = 224;
 }
 
 bool SnesMemory::saveSramToFile(const std::string& path) {

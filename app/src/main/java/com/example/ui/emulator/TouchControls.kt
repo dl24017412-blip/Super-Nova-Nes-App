@@ -39,6 +39,10 @@ fun TouchControls(
     onButtonEvent: (SnesButton, Boolean) -> Unit,
     onOpenMenu: () -> Unit,
     onQuickReset: () -> Unit,
+    isFastForward: Boolean = false,
+    onToggleFastForward: () -> Unit = {},
+    onQuickSave: () -> Unit = {},
+    onQuickLoad: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -51,9 +55,10 @@ fun TouchControls(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             ShoulderButton(
                 label = "L",
@@ -61,23 +66,74 @@ fun TouchControls(
                 onPressedChange = { onButtonEvent(SnesButton.L, it) }
             )
 
-            // Center Top Quick Controls (Menu & Reset)
+            // Center Top Quick Controls (FF, QS, QL, Reset, Menu)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Fast-Forward Toggle Button
+                IconButton(
+                    onClick = onToggleFastForward,
+                    modifier = Modifier
+                        .testTag("btn_fast_forward")
+                        .size(34.dp)
+                        .background(
+                            if (isFastForward) SnesPrimary.copy(alpha = 0.9f) else DarkSurfaceVariant.copy(alpha = 0.8f),
+                            CircleShape
+                        )
+                ) {
+                    Text(
+                        text = if (isFastForward) "2x" else "1x",
+                        color = if (isFastForward) Color.White else TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Quick Save
+                IconButton(
+                    onClick = onQuickSave,
+                    modifier = Modifier
+                        .testTag("btn_quick_save")
+                        .size(34.dp)
+                        .background(DarkSurfaceVariant.copy(alpha = 0.8f), CircleShape)
+                ) {
+                    Text(
+                        text = "QS",
+                        color = SnesSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Quick Load
+                IconButton(
+                    onClick = onQuickLoad,
+                    modifier = Modifier
+                        .testTag("btn_quick_load")
+                        .size(34.dp)
+                        .background(DarkSurfaceVariant.copy(alpha = 0.8f), CircleShape)
+                ) {
+                    Text(
+                        text = "QL",
+                        color = SnesSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 IconButton(
                     onClick = onQuickReset,
                     modifier = Modifier
                         .testTag("btn_quick_reset")
-                        .size(36.dp)
+                        .size(34.dp)
                         .background(DarkSurfaceVariant.copy(alpha = 0.8f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Reset",
                         tint = TextSecondary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
@@ -85,14 +141,14 @@ fun TouchControls(
                     onClick = onOpenMenu,
                     modifier = Modifier
                         .testTag("btn_menu")
-                        .size(36.dp)
+                        .size(34.dp)
                         .background(DarkSurfaceVariant.copy(alpha = 0.8f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = "Menu",
                         tint = TextPrimary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

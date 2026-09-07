@@ -46,6 +46,10 @@ public:
     bool saveSram(const std::string& path);
     bool loadSram(const std::string& path);
 
+    // Fast Forward
+    void setFastForward(bool enabled) { fastForward.store(enabled); }
+    bool isFastForward() const { return fastForward.load(); }
+
     // Settings
     void setVideoOptions(AspectRatioMode aspect, VideoFilter filter, PerformanceProfile profile);
     void setAudioOptions(bool enabled, float volume);
@@ -88,6 +92,7 @@ private:
     std::atomic<bool> running{false};
     std::atomic<bool> paused{false};
     std::atomic<bool> threadExit{false};
+    std::atomic<bool> fastForward{false};
 
     std::thread emuThread;
     std::mutex stateMutex;

@@ -14,6 +14,9 @@ interface RomDao {
     @Query("SELECT * FROM roms ORDER BY lastPlayedTimestamp DESC, title ASC")
     fun getAllRoms(): Flow<List<RomEntity>>
 
+    @Query("SELECT * FROM roms ORDER BY lastPlayedTimestamp DESC, title ASC")
+    suspend fun getAllRomsList(): List<RomEntity>
+
     @Query("SELECT * FROM roms WHERE isFavorite = 1 ORDER BY title ASC")
     fun getFavoriteRoms(): Flow<List<RomEntity>>
 

@@ -27,6 +27,7 @@ data class EmulatorUiState(
     val isLoading: Boolean = true,
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
+    val isFastForward: Boolean = false,
     val errorMessage: String? = null,
     val rom: RomEntity? = null,
     val fps: Float = 0f,
@@ -175,6 +176,20 @@ class EmulatorViewModel(application: Application) : AndroidViewModel(application
                 vibrator?.vibrate(15)
             }
         } catch (_: Exception) {}
+    }
+
+    fun toggleFastForward() {
+        val newFf = !_uiState.value.isFastForward
+        _uiState.value = _uiState.value.copy(isFastForward = newFf)
+        NativeBridge.nativeSetFastForward(newFf)
+    }
+
+    fun quickSave() {
+        saveState(0)
+    }
+
+    fun quickLoad() {
+        loadState(0)
     }
 
     fun saveState(slot: Int) {

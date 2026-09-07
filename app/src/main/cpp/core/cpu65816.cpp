@@ -565,12 +565,270 @@ void Cpu65816::executeOpcode(uint8_t opcode) {
             break;
         }
 
+        // CMP Memory
+        case 0xC5: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) { uint8_t v = mem->read(a); uint8_t cur = A & 0xFF; flagC = cur >= v; setNZ8(cur - v); }
+            else { uint16_t v = mem->read16(a); flagC = A >= v; setNZ16(A - v); }
+            break;
+        }
+        case 0xCD: { // Absolute
+            uint32_t a = addrAbsolute();
+            if (flagM) { uint8_t v = mem->read(a); uint8_t cur = A & 0xFF; flagC = cur >= v; setNZ8(cur - v); }
+            else { uint16_t v = mem->read16(a); flagC = A >= v; setNZ16(A - v); }
+            break;
+        }
+        case 0xDD: { // Absolute, X
+            uint32_t a = addrAbsoluteX();
+            if (flagM) { uint8_t v = mem->read(a); uint8_t cur = A & 0xFF; flagC = cur >= v; setNZ8(cur - v); }
+            else { uint16_t v = mem->read16(a); flagC = A >= v; setNZ16(A - v); }
+            break;
+        }
+        case 0xD9: { // Absolute, Y
+            uint32_t a = addrAbsoluteY();
+            if (flagM) { uint8_t v = mem->read(a); uint8_t cur = A & 0xFF; flagC = cur >= v; setNZ8(cur - v); }
+            else { uint16_t v = mem->read16(a); flagC = A >= v; setNZ16(A - v); }
+            break;
+        }
+
+        // AND
+        case 0x29: { // Immediate
+            if (flagM) { A = (A & 0xFF00) | ((A & fetch8()) & 0xFF); setNZ8(A & 0xFF); }
+            else { A &= fetch16(); setNZ16(A); }
+            break;
+        }
+        case 0x25: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) { A = (A & 0xFF00) | ((A & mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A &= mem->read16(a); setNZ16(A); }
+            break;
+        }
+        case 0x2D: { // Absolute
+            uint32_t a = addrAbsolute();
+            if (flagM) { A = (A & 0xFF00) | ((A & mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A &= mem->read16(a); setNZ16(A); }
+            break;
+        }
+        case 0x3D: { // Absolute, X
+            uint32_t a = addrAbsoluteX();
+            if (flagM) { A = (A & 0xFF00) | ((A & mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A &= mem->read16(a); setNZ16(A); }
+            break;
+        }
+
+        // ORA
+        case 0x09: { // Immediate
+            if (flagM) { A = (A & 0xFF00) | ((A | fetch8()) & 0xFF); setNZ8(A & 0xFF); }
+            else { A |= fetch16(); setNZ16(A); }
+            break;
+        }
+        case 0x05: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) { A = (A & 0xFF00) | ((A | mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A |= mem->read16(a); setNZ16(A); }
+            break;
+        }
+        case 0x0D: { // Absolute
+            uint32_t a = addrAbsolute();
+            if (flagM) { A = (A & 0xFF00) | ((A | mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A |= mem->read16(a); setNZ16(A); }
+            break;
+        }
+
+        // EOR
+        case 0x49: { // Immediate
+            if (flagM) { A = (A & 0xFF00) | ((A ^ fetch8()) & 0xFF); setNZ8(A & 0xFF); }
+            else { A ^= fetch16(); setNZ16(A); }
+            break;
+        }
+        case 0x45: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) { A = (A & 0xFF00) | ((A ^ mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A ^= mem->read16(a); setNZ16(A); }
+            break;
+        }
+        case 0x4D: { // Absolute
+            uint32_t a = addrAbsolute();
+            if (flagM) { A = (A & 0xFF00) | ((A ^ mem->read(a)) & 0xFF); setNZ8(A & 0xFF); }
+            else { A ^= mem->read16(a); setNZ16(A); }
+            break;
+        }
+
+        // BIT
+        case 0x89: { // Immediate
+            if (flagM) { uint8_t imm = fetch8(); flagZ = ((A & imm) & 0xFF) == 0; }
+            else { uint16_t imm = fetch16(); flagZ = (A & imm) == 0; }
+            break;
+        }
+        case 0x24: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) {
+                uint8_t v = mem->read(a);
+                flagZ = ((A & v) & 0xFF) == 0;
+                flagN = (v & 0x80) != 0;
+                flagV = (v & 0x40) != 0;
+            } else {
+                uint16_t v = mem->read16(a);
+                flagZ = (A & v) == 0;
+                flagN = (v & 0x8000) != 0;
+                flagV = (v & 0x4000) != 0;
+            }
+            break;
+        }
+        case 0x2C: { // Absolute
+            uint32_t a = addrAbsolute();
+            if (flagM) {
+                uint8_t v = mem->read(a);
+                flagZ = ((A & v) & 0xFF) == 0;
+                flagN = (v & 0x80) != 0;
+                flagV = (v & 0x40) != 0;
+            } else {
+                uint16_t v = mem->read16(a);
+                flagZ = (A & v) == 0;
+                flagN = (v & 0x8000) != 0;
+                flagV = (v & 0x4000) != 0;
+            }
+            break;
+        }
+
+        // ADC
+        case 0x69: { // Immediate
+            if (flagM) {
+                uint8_t v = fetch8();
+                int res = (A & 0xFF) + v + (flagC ? 1 : 0);
+                flagV = (~((A & 0xFF) ^ v) & ((A & 0xFF) ^ res) & 0x80) != 0;
+                flagC = res > 0xFF;
+                A = (A & 0xFF00) | (res & 0xFF);
+                setNZ8(A & 0xFF);
+            } else {
+                uint16_t v = fetch16();
+                int32_t res = A + v + (flagC ? 1 : 0);
+                flagV = (~(A ^ v) & (A ^ res) & 0x8000) != 0;
+                flagC = res > 0xFFFF;
+                A = res & 0xFFFF;
+                setNZ16(A);
+            }
+            break;
+        }
+        case 0x65: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) {
+                uint8_t v = mem->read(a);
+                int res = (A & 0xFF) + v + (flagC ? 1 : 0);
+                flagV = (~((A & 0xFF) ^ v) & ((A & 0xFF) ^ res) & 0x80) != 0;
+                flagC = res > 0xFF;
+                A = (A & 0xFF00) | (res & 0xFF);
+                setNZ8(A & 0xFF);
+            } else {
+                uint16_t v = mem->read16(a);
+                int32_t res = A + v + (flagC ? 1 : 0);
+                flagV = (~(A ^ v) & (A ^ res) & 0x8000) != 0;
+                flagC = res > 0xFFFF;
+                A = res & 0xFFFF;
+                setNZ16(A);
+            }
+            break;
+        }
+
+        // SBC
+        case 0xE9: { // Immediate
+            if (flagM) {
+                uint8_t v = fetch8();
+                int res = (A & 0xFF) - v - (flagC ? 0 : 1);
+                flagV = (((A & 0xFF) ^ v) & ((A & 0xFF) ^ res) & 0x80) != 0;
+                flagC = res >= 0;
+                A = (A & 0xFF00) | (res & 0xFF);
+                setNZ8(A & 0xFF);
+            } else {
+                uint16_t v = fetch16();
+                int32_t res = A - v - (flagC ? 0 : 1);
+                flagV = ((A ^ v) & (A ^ res) & 0x8000) != 0;
+                flagC = res >= 0;
+                A = res & 0xFFFF;
+                setNZ16(A);
+            }
+            break;
+        }
+        case 0xE5: { // Direct
+            uint32_t a = addrDirect();
+            if (flagM) {
+                uint8_t v = mem->read(a);
+                int res = (A & 0xFF) - v - (flagC ? 0 : 1);
+                flagV = (((A & 0xFF) ^ v) & ((A & 0xFF) ^ res) & 0x80) != 0;
+                flagC = res >= 0;
+                A = (A & 0xFF00) | (res & 0xFF);
+                setNZ8(A & 0xFF);
+            } else {
+                uint16_t v = mem->read16(a);
+                int32_t res = A - v - (flagC ? 0 : 1);
+                flagV = ((A ^ v) & (A ^ res) & 0x8000) != 0;
+                flagC = res >= 0;
+                A = res & 0xFFFF;
+                setNZ16(A);
+            }
+            break;
+        }
+
+        // ASL, LSR
+        case 0x0A: { // ASL A
+            if (flagM) {
+                flagC = (A & 0x80) != 0;
+                A = (A & 0xFF00) | ((A << 1) & 0xFE);
+                setNZ8(A & 0xFF);
+            } else {
+                flagC = (A & 0x8000) != 0;
+                A = (A << 1) & 0xFFFF;
+                setNZ16(A);
+            }
+            break;
+        }
+        case 0x4A: { // LSR A
+            if (flagM) {
+                flagC = (A & 0x01) != 0;
+                A = (A & 0xFF00) | ((A & 0xFF) >> 1);
+                setNZ8(A & 0xFF);
+            } else {
+                flagC = (A & 0x01) != 0;
+                A >>= 1;
+                setNZ16(A);
+            }
+            break;
+        }
+
+        // Memory INC / DEC
+        case 0xE6: { // INC Direct
+            uint32_t a = addrDirect();
+            if (flagM) { uint8_t v = mem->read(a) + 1; mem->write(a, v); setNZ8(v); }
+            else { uint16_t v = mem->read16(a) + 1; mem->write16(a, v); setNZ16(v); }
+            break;
+        }
+        case 0xC6: { // DEC Direct
+            uint32_t a = addrDirect();
+            if (flagM) { uint8_t v = mem->read(a) - 1; mem->write(a, v); setNZ8(v); }
+            else { uint16_t v = mem->read16(a) - 1; mem->write16(a, v); setNZ16(v); }
+            break;
+        }
+
+        // Additional JMP / Stack
+        case 0x6C: { // JMP (Indirect)
+            uint16_t ptr = fetch16();
+            PC = mem->read16(ptr);
+            break;
+        }
+        case 0x7C: { // JMP (Absolute Indexed Indirect, X)
+            uint16_t ptr = fetch16();
+            PC = mem->read16((PB << 16) | ((ptr + X) & 0xFFFF));
+            break;
+        }
+        case 0xF4: push16(fetch16()); break; // PEA
+        case 0xD4: push16(mem->read16(addrDirect())); break; // PEI
+        case 0x62: { int16_t offset = (int16_t)fetch16(); push16(PC + offset); break; } // PER
+
         case 0xEA: break; // NOP
         case 0xDB: stopped = true; break; // STP
         case 0xCB: waitingForInterrupt = true; break; // WAI
 
         default:
-            // Unimplemented/rare opcode - advance PC safely
             break;
     }
 }

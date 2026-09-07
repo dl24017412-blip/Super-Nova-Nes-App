@@ -7,11 +7,14 @@ import com.example.data.AppDatabase
 import com.example.data.model.RomEntity
 import com.example.data.model.SaveStateEntity
 import com.example.jni.NativeBridge
+import com.example.util.DefaultRomProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.util.zip.ZipInputStream
 
 class EmulatorRepository(private val context: Context) {
     private val db = AppDatabase.getDatabase(context)
@@ -20,6 +23,31 @@ class EmulatorRepository(private val context: Context) {
 
     val allRoms: Flow<List<RomEntity>> = romDao.getAllRoms()
     val favoriteRoms: Flow<List<RomEntity>> = romDao.getFavoriteRoms()
+
+    suspend fun ensureDefaultRom(): RomEntity = withContext(Dispatchers.IO) {
+        val existing = romDao.getAllRomsList()
+        val defaultRom = existing.firstOrNull { it.fileName == DefaultRomProvider.DEFAULT_ROM_FILENAME }
+        if (defaultRom != null) {
+            return@withContext defaultRom
+        }
+
+        val romDir = File(context.filesDir, "roms").apply { mkdirs() }
+        val file = DefaultRomProvider.getOrCreateDefaultRom(romDir)
+
+        val entity = RomEntity(
+            title = DefaultRomProvider.DEFAULT_ROM_TITLE,
+            filePath = file.absolutePath,
+            fileName = file.name,
+            fileSize = file.length(),
+            lastPlayedTimestamp = System.currentTimeMillis(),
+            playTimeSeconds = 0,
+            isFavorite = true,
+            isHiRom = false,
+            hasBattery = true
+        )
+        val id = romDao.insertRom(entity)
+        entity.copy(id = id)
+    }
 
     fun getSaveStatesForRom(romId: Long): Flow<List<SaveStateEntity>> =
         saveStateDao.getSaveStatesForRom(romId)
@@ -59,13 +87,49 @@ class EmulatorRepository(private val context: Context) {
             }
 
             val romDir = File(context.filesDir, "roms").apply { mkdirs() }
-            val destFile = File(romDir, fileName)
+            var destFile = File(romDir, fileName)
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(destFile).use { output ->
-                    input.copyTo(output)
+            if (fileName.endsWith(".zip", ignoreCase = true)) {
+                var extractedFile: File? = null
+                context.contentResolver.openInputStream(uri)?.use { inStream ->
+                    ZipInputStream(inStream).use { zis ->
+                        var entry = zis.nextEntry
+                        while (entry != null) {
+                            val entryName = entry.name
+                            if (!entry.isDirectory && (entryName.endsWith(".sfc", ignoreCase = true) ||
+                                        entryName.endsWith(".smc", ignoreCase = true) ||
+                                        entryName.endsWith(".fig", ignoreCase = true) ||
+                                        entryName.endsWith(".swc", ignoreCase = true))) {
+                                val cleanName = File(entryName).name
+                                val target = File(romDir, cleanName)
+                                FileOutputStream(target).use { out ->
+                                    zis.copyTo(out)
+                                }
+                                extractedFile = target
+                                fileName = cleanName
+                                break
+                            }
+                            entry = zis.nextEntry
+                        }
+                    }
                 }
-            } ?: return@withContext Result.failure(Exception("Não foi possível ler o arquivo"))
+                if (extractedFile != null) {
+                    destFile = extractedFile!!
+                } else {
+                    // Fallback copy zip as is
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        FileOutputStream(destFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    } ?: return@withContext Result.failure(Exception("Não foi possível ler o arquivo"))
+                }
+            } else {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
+                } ?: return@withContext Result.failure(Exception("Não foi possível ler o arquivo"))
+            }
 
             val title = fileName.substringBeforeLast(".")
                 .replace("_", " ")

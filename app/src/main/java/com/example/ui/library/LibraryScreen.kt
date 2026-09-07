@@ -382,6 +382,21 @@ fun RomCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (rom.fileName == com.example.util.DefaultRomProvider.DEFAULT_ROM_FILENAME) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = SnesSecondary.copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = "PADRÃO",
+                                color = SnesSecondary,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     Text(
                         text = formatFileSize(rom.fileSize),
                         style = MaterialTheme.typography.bodySmall,
@@ -495,7 +510,7 @@ fun EmptyLibraryState(
         ) {
             Icon(Icons.Default.PlayCircleOutline, contentDescription = null, tint = SnesSecondary)
             Spacer(Modifier.width(8.dp))
-            Text("Carregar Demo Interativa", color = SnesSecondary, fontWeight = FontWeight.SemiBold)
+            Text("Carregar Jogo Padrão", color = SnesSecondary, fontWeight = FontWeight.SemiBold)
         }
     }
 }

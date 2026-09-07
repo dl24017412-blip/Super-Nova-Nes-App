@@ -177,6 +177,9 @@ bool GLRenderer::setSurface(ANativeWindow* win) {
 
     ready = true;
     LOGI("GLRenderer initialized: %dx%d", surfaceWidth, surfaceHeight);
+
+    // Detach from UI thread so emuThread can make it current
+    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     return true;
 }
 
@@ -188,6 +191,9 @@ void GLRenderer::updateSurfaceSize(int width, int height) {
 
 void GLRenderer::destroySurface() {
     ready = false;
+    if (display != EGL_NO_DISPLAY) {
+        eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    }
     destroyGL();
     destroyEGL();
     if (window) {
@@ -254,7 +260,14 @@ void GLRenderer::calculateViewport(int& vx, int& vy, int& vw, int& vh) {
 
 void GLRenderer::renderFrame(const uint32_t* framebuffer) {
     std::lock_guard<std::mutex> lock(renderMutex);
-    if (!ready || !framebuffer) return;
+    if (!ready || !framebuffer || display == EGL_NO_DISPLAY || surface == EGL_NO_SURFACE) return;
+
+    if (eglGetCurrentContext() != context) {
+        if (!eglMakeCurrent(display, surface, surface, context)) {
+            LOGE("Failed to make EGL context current on emuThread: %d", eglGetError());
+            return;
+        }
+    }
 
     int vx, vy, vw, vh;
     calculateViewport(vx, vy, vw, vh);

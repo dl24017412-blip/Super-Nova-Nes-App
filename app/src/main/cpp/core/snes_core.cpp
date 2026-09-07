@@ -151,6 +151,7 @@ void SnesCore::runOneFrame() {
 
     // 262 total scanlines in NTSC (0..223 visible, 224..261 VBlank)
     for (int line = 0; line < 224; ++line) {
+        memory->setScanline(line);
         memory->runHdma();
         ppu->renderScanline(line);
 
@@ -164,9 +165,13 @@ void SnesCore::runOneFrame() {
     }
 
     // VBlank begin
-    cpu->triggerNmi();
+    memory->triggerVBlank();
+    if (memory->isNmiEnabled()) {
+        cpu->triggerNmi();
+    }
 
     for (int line = 224; line < 262; ++line) {
+        memory->setScanline(line);
         int cycles = 0;
         while (cycles < 340) {
             int c = cpu->step();
@@ -212,9 +217,10 @@ void SnesCore::emulationThreadLoop() {
         currentCpuTimeMs = cpuDuration.count() / 1000.0f;
 
         // Frame pacing
+        auto target = fastForward.load() ? microseconds(8333) : microseconds(16667);
         auto elapsed = duration_cast<microseconds>(frameEnd - lastTime);
-        if (elapsed < targetFrameDuration) {
-            std::this_thread::sleep_for(targetFrameDuration - elapsed);
+        if (elapsed < target) {
+            std::this_thread::sleep_for(target - elapsed);
         }
         auto totalFrameDuration = duration_cast<microseconds>(steady_clock::now() - lastTime);
         currentFrameTimeMs = totalFrameDuration.count() / 1000.0f;

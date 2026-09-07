@@ -44,12 +44,22 @@ public:
     void setJoypad(int controller, uint16_t buttons);
     uint16_t getJoypad(int controller) const { return controller == 0 ? joypad1 : joypad2; }
 
+    // Scanline & VBlank tracking
+    void setScanline(int line);
+    void triggerVBlank();
+    bool isNmiEnabled() const { return (nmitimen & 0x80) != 0; }
+    bool isJoypadAutoReadEnabled() const { return (nmitimen & 0x01) != 0; }
+    int getScanline() const { return currentScanline; }
+
 private:
     SnesCore* core;
     std::vector<uint8_t> rom;
     std::vector<uint8_t> wram;  // 128 KB
     std::vector<uint8_t> sram;  // typically 8KB - 64KB
     RomHeaderInfo header;
+
+    int currentScanline = 0;
+    bool vblankFlag = false;
 
     uint16_t joypad1 = 0;
     uint16_t joypad2 = 0;
